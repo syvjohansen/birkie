@@ -5,30 +5,23 @@
 
 <svg width="1000", height="600"></svg>
 
+<!-- Button -->
 <div>
-    <input type="checkbox" class="checkbox" name="ME" checked>
-    <label for="ME">Men's Elite</label>
-    <input type="checkbox" class="checkbox" name="WE" checked>
-    <label for="WE">Women's Elite</label>
-    <input type="checkbox" class="checkbox" name="Wave1" checked>
-    <label for="Wave1">Wave 1</label>
-    <input type="checkbox" class="checkbox" name="Wave2" checked>
-    <label for="Wave2">Wave 2</label>
-    <input type="checkbox" class="checkbox" name="Wave3" checked>
-    <label for="Wave3">Wave 3</label>
-    <input type="checkbox" class="checkbox" name="Wave4" checked>
-    <label for="Wave4">Wave 4</label>
-    <input type="checkbox" class="checkbox" name="Wave5" checked>
-    <label for="Wave5">Wave 5</label>
-    <input type="checkbox" class="checkbox" name="Wave6" checked>
-    <label for="Wave6">Wave 6</label>
-    <input type="checkbox" class="checkbox" name="Wave7" checked>
-    <label for="Wave7">Wave 7</label>
-    <input type="checkbox" class="checkbox" name="Wave8" checked>
-    <label for="Wave8">Wave 8</label>
-    <input type="checkbox" class="checkbox" name="Oldies" checked>
-    <label for="Oldies">Oldies</label>
-</div>
+    <input type="checkbox" class="checkbox" value="ME" checked><label>Men's Elite</label>
+    <input type="checkbox" class="checkbox" value="WE" checked><label>Women's Elite</label>
+    <input type="checkbox" class="checkbox" value="W1" checked><label>Wave 1</label>
+    <input type="checkbox" class="checkbox" value="W2" checked><label>Wave 2</label>
+    <input type="checkbox" class="checkbox" value="W3" checked><label>Wave 3</label>
+    <input type="checkbox" class="checkbox" value="W4" checked><label>Wave 4</label>
+    <input type="checkbox" class="checkbox" value="W5" checked><label>Wave 5</label>
+    <input type="checkbox" class="checkbox" value="W6" checked><label>Wave 6</label>
+    <input type="checkbox" class="checkbox" value="W7" checked><label>Wave 7</label>
+    <input type="checkbox" class="checkbox" value="W8" checked><label>Wave 8</label>
+    <input type="checkbox" class="checkbox" value="Oldies" checked><label>Oldies</label>
+  </div>
+<br>
+<div> <input type="text" class="text" value="bib #"> </div>
+
 
 <body>
 <script>
@@ -45,7 +38,7 @@ console.log(birkie)
 var svg = d3.select("svg"),
     width = +svg.attr("width"),
     height = +svg.attr("height")
-    g = svg.append("g");
+    points = svg.append("g");
 
 var margin = 50
 
@@ -63,8 +56,9 @@ var x_axis = d3.axisBottom()
 var xAxisTranslate = height - margin;
 
 svg.append("g")
-        .attr("transform", "translate(0," + xAxisTranslate +")")
-        .call(x_axis);
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + xAxisTranslate +")")
+    .call(x_axis);
 
 var max_pace = d3.max(birkie, function(d) { return d.pace; } )
 var min_pace = d3.min(birkie, function(d) { return d.pace; } )
@@ -79,72 +73,82 @@ var y_axis = d3.axisLeft()
 var yAxisTranslate = margin;
 
 svg.append("g")
+    .attr("class", "y axis")
     .attr("transform", "translate(" + yAxisTranslate + ", 0)")
     .call(y_axis);
 
-// Add Data Points:
+// Color Scale for Waves:
+Waves = ["ME", "WE", "W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8","Oldies"]; 
+var colorScale = d3.scaleOrdinal()
+    .domain(Waves)
+    .range(d3.schemeTableau10); //console.log(d3.schemeTableau10)
 
-Waves = ["M Elite", "W Elite", "Wave 1", "Wave 2", "Wave 3", "Wave 4", "Wave 5", "Wave 6", "Wave 7", "Wave 8","Oldies"]; 
+// Intialize Points:
+var t = d3.transition().duration(2000);
 
-function filter_data(){
-data = birkie // Original Data
-
-// For each check box:
-d3.selectAll(".checkbox").each(function(d,i){
-  cb = d3.select(this);
-  grp = cb.property("value")
-  // If the box is check, I show the group
-  if(cb.property("checked")){
-    console.log(Waves[i])
-  // Otherwise I hide it
-  }else{
-    data = data.filter(function(d){ return d.wave != Waves[i] })
-  }
-})
-//console.log(data);
-return data
-}
-
-function update() {
-
-  data = filter_data();
-
-  console.log(data);
-  var t = d3.transition().duration(1000);
-
-  // DATA JOIN
-  // Join new data with old elements, if any.
-  var points = g.selectAll("circle").data(birkie, function(d) { return d.Bib; }); // need unique id for each data point *   
-
-  // Exit and remove old elements
-  points.exit()
-      .attr('class', "exit")
-      .transition(t)
-      .attr('cy', height)
-      .style('fill-opacity', 1e-6)
-      .remove();
-
-  // UPDATE
-  // Update old elements as needed.
-  points
-    .transition(t)
-    .attr("class",'update')
-    .attr("cx", function(d, i) { return x_scale(d.distance); })
-    .attr('cy',function(d, i) { return y_scale(d.pace); });
-
-  // ENTER new elements present in new data.
-  points.enter()
-        .append("circle")
-        .transition(t)
-        .attr("class","enter")
+points
+    .selectAll("circle")
+    .data(birkie, function(d) { return d.wave; })
+    .enter()
+    .append("circle")
+        //.transition(t)
+        .attr("id", function(d) { return d.checkpoint + d.Bib; })
+        .attr("class",function(d) { return d.wave; })
+        .attr("cx", function(d) { return x_scale(d.distance); })
+        .attr('cy',function(d) { return y_scale(d.pace); })
         .attr("r","2")
-        .attr("cx", function(d, i) { return x_scale(d.distance); })
-        .attr('cy',function(d, i) { return y_scale(d.pace); });
-}
+        .style("fill", function(d){ return colorScale(d.wave); });
 
-d3.selectAll(".checkbox").on("change",update);
+// Wave Filter: 
+//var birkie_copy = birkie;
+//http://emilydolson.github.io/D3-visualising-data/09-d3exit.html
+d3.selectAll(".checkbox").on("change",function() {
+  var W = this.value;
+  console.log(W)
+  if (this.checked) { 
+    var birkie_wave = birkie.filter(function(d){ return d.wave == W;});
+    //birkie_copy = birkie_copy.concat(birkie_wave);
 
-update(); // Intialize 
+    points
+        .selectAll("circle")
+        .data(birkie_wave, function(d) { return d.wave; })
+        .enter()
+        .append("circle")
+            //.transition(t)
+            .attr("id", function(d) { return d.checkpoint + d.Bib; })
+            .attr("class",function(d) { return d.wave; })
+            .attr("cx", function(d) { return x_scale(d.distance); })
+            .attr('cy',function(d) { return y_scale(d.pace); })
+            .attr("r","2")
+            .style("fill", function(d){ return colorScale(d.wave); });
+  } else { 
+    //birkie_copy = birkie_copy.filter(function(d){ return d.wave != W;});
+    points
+        .selectAll("."+W)
+        .data(birkie)
+        .remove();
+    }
+    //var element = d3.select('g').node();
+    //console.log(element.getBoundingClientRect())//.width;
+
+});
+//var last_value = []
+d3.selectAll(".text").on("change",function() {
+    var B = this.value;
+
+    for (let i = 1; i < 6; i++) {
+        points
+            .select("#S"+i.toString()+B)
+            .data(birkie)
+            .attr("r","10")
+    }
+    //var last_value = [B]
+    
+});
+
+
+
+
 
 
 });

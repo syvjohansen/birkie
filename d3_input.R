@@ -136,16 +136,16 @@ distances <- function(pace_str) {
 
 waves <- function(start_time) {
   if(start_time < as.times("08:30:00")){ return("Oldies")}
-  if(start_time < as.times("08:50:00")){ return("W Elite")}
-  if(start_time < as.times("08:55:00")){ return("M Elite")}
-  if(start_time < as.times("09:05:00")){ return("Wave 1")}
-  if(start_time < as.times("09:20:00")){ return("Wave 2")}
-  if(start_time < as.times("09:30:00")){ return("Wave 3")}
-  if(start_time < as.times("09:40:00")){ return("Wave 4")}
-  if(start_time < as.times("09:50:00")){ return("Wave 5")}
-  if(start_time < as.times("09:55:00")){ return("Wave 6")}
-  if(start_time < as.times("10:00:00")){ return("Wave 7")}
-  if(start_time < as.times("10:05:00")){ return("Wave 8")}
+  if(start_time < as.times("08:50:00")){ return("WE")}
+  if(start_time < as.times("08:55:00")){ return("ME")}
+  if(start_time < as.times("09:05:00")){ return("W1")}
+  if(start_time < as.times("09:20:00")){ return("W2")}
+  if(start_time < as.times("09:30:00")){ return("W3")}
+  if(start_time < as.times("09:40:00")){ return("W4")}
+  if(start_time < as.times("09:50:00")){ return("W5")}
+  if(start_time < as.times("09:55:00")){ return("W6")}
+  if(start_time < as.times("10:00:00")){ return("W7")}
+  if(start_time < as.times("10:05:00")){ return("W8")}
   else{ return("Late Start") }
 }
 as.times("08:30:30") < as.times("08:30:00")
@@ -177,5 +177,7 @@ birkiedf_vis_gath %>%
   geom_point(aes(x=distance,y=pace_agg,color=wave))
 
 write.csv(birkiedf_vis_gath,'d3_input.csv',row.names=FALSE)
+#write.csv(birkiedf_vis_gath[sample(19000,1000,replace = FALSE),],'d3_input_small.csv',row.names=FALSE)
+
 
 
