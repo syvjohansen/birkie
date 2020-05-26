@@ -37,7 +37,6 @@ d3.csv('d3_input.csv').then(function(birkie) {
 
 console.log(birkie)
 
-// Initialize SVG:
 var svg = d3.select("svg"),
     width = +svg.attr("width"),
     height = +svg.attr("height")
@@ -86,41 +85,6 @@ var colorScale = d3.scaleOrdinal()
     .domain(Waves)
     .range(d3.schemeTableau10); //console.log(d3.schemeTableau10)
 
-// Intialize Points:
 
-
-var t = d3.transition().duration(2000);
-
-var points = svg.selectAll("circle")
-    .data(birkie, function(d) { return d.wave; })
-    .enter()
-    .append("circle")
-        //.transition(t)
-        .attr("id", function(d) { return d.checkpoint + d.Bib; })
-        .attr("class",function(d) { return d.wave; })
-        .attr("cx", function(d) { return x_scale(d.distance); })
-        .attr('cy',function(d) { return y_scale(d.pace); })
-        .attr("r","2")
-        .style("fill", function(d){ return colorScale(d.wave); });
-
-//Mouse over tutorial from: http://bl.ocks.org/natemiller/219e1b9374b863c3622e
-        points.on("mouseover", function(d){
-            var skier = d3.selectAll('circle.' + d.Bib)
-                .attr("r", 8)
-                .attr("fill", "orange")
-        });
-
-    
-// Wave Filter: 
-//var birkie_copy = birkie;
-//http://emilydolson.github.io/D3-visualising-data/09-d3exit.html
-
-
-
-
-
-
-
-});
 </script>
 </body>
