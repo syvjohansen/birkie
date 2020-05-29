@@ -92,11 +92,13 @@ var colorScale = d3.scaleOrdinal()
 var t = d3.transition().duration(2000);
 
 var points = svg.selectAll("circle")
-    .data(birkie, function(d) { return d.wave; })
+    .data(birkie, function(d) { return d.Bib; })
+    //.data(data)
     .enter()
     .append("circle")
         //.transition(t)
         .attr("id", function(d) { return d.checkpoint + d.Bib; })
+        //.attr("class", function(d) {return d.Bib;})
         .attr("class",function(d) { return d.wave; })
         .attr("cx", function(d) { return x_scale(d.distance); })
         .attr('cy',function(d) { return y_scale(d.pace); })
@@ -105,9 +107,9 @@ var points = svg.selectAll("circle")
 
 //Mouse over tutorial from: http://bl.ocks.org/natemiller/219e1b9374b863c3622e
         points.on("mouseover", function(d){
-            var skier = d3.selectAll('circle.' + d.Bib)
-                .attr("r", 8)
-                .attr("fill", "orange")
+            var skier = d3.selectAll('circle.'+ d.Bib)
+                .attr("r", 6)
+               // .attr("fill", "orange")
         });
 
     
