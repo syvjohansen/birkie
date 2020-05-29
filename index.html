@@ -250,8 +250,8 @@ $( "#gene_search_box" ).on("change",function() {
         points_A
             .select("#S"+i.toString()+B)
             .data(birkie)
-            .attr("r","5")
-            .style('fill', 'red')
+            .attr("r","2")
+            .style('fill', "red")
             .style("opacity", 1)
             .raise()
             //.moveToFront()
@@ -404,9 +404,19 @@ $( "#gene_search_box" ).on("change",function() {
         var B = Name_to_Bib_[Ath];
         console.log(Ath,B);
         points_B
+            .selectAll("circle")
+            .data(birkie_times)
+            .style("fill", "grey")
+            .attr("r", "2")
+            .style("opacity", .2)
+        points_B
             .select("#B"+B)
             .data(birkie_times)
-            .attr("r","10")
+            .attr("r","2")
+            .style("fill", "red")
+            .style("opacity", 1)
+            .raise()
+
     });
 
     // A & B) AutoComplete:
