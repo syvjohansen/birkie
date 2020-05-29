@@ -236,16 +236,16 @@ $( "#gene_search_box" ).on("change",function() {
     console.log(Ath,B);
     //Two for loops.  One that turns everything into a light gray 
     //and another one that brings out the individual's results
-    for (let i = 1; i < 6; i++) {
-        points_A
-            .selectAll('circle')
-            //.style("stroke", "black")
+  //  for (let i = 1; i < 6; i++) {
+    points_A
+        .selectAll('circle')
+        //.style("stroke", "black")
 
-            .style('fill', 'grey')
-            //.data(birkie)
-            .attr("r", "2")
-            .style("opacity", .2)
-    }
+        .style('fill', 'grey')
+        //.data(birkie)
+        .attr("r", "2")
+        .style("opacity", .2)
+  //  }
     for(let i = 1; i <6; i++){
         points_A
             .select("#S"+i.toString()+B)
