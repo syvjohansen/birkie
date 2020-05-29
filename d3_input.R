@@ -12,7 +12,7 @@ options(scipen = 999)
 ## Load Syver's Excel File:
 ####################
 getwd()
-setwd("/Users/shlong/Desktop/birkie") ## NEED TO SET YOUR WORKING DIRECTORY
+setwd("/Users/syverjohansen/ski/birkie2") ## NEED TO SET YOUR WORKING DIRECTORY
 
 birkie <- read_excel("birke.xlsx", 
                      sheet = "Birkie", col_names = FALSE, na = "NA")
@@ -176,8 +176,68 @@ birkiedf_vis_gath %>%
   ggplot()+
   geom_point(aes(x=distance,y=pace_agg,color=wave))
 
-write.csv(birkiedf_vis_gath,'d3_input.csv',row.names=FALSE)
+#write.csv(birkiedf_vis_gath,'d3_input.csv',row.names=FALSE)
 #write.csv(birkiedf_vis_gath[sample(19000,1000,replace = FALSE),],'d3_input_small.csv',row.names=FALSE)
 
+####################
+## Add wave shifts...
+####################
+
+shift <- function(wave,checkpoint) {
+  if(wave == "Oldies" ){s = -5}
+  else if(wave == "WE"){s = 4}
+  else if(wave == "ME"){s = 5}
+  else if(wave == "W1"){s = 3}
+  else if(wave == "W2"){s = 2}
+  else if(wave == "W3"){s = 1}
+  else if(wave == "W4"){s = 0}
+  else if(wave == "W5"){s = -1}
+  else if(wave == "W6"){s = -2}
+  else if(wave == "W7"){s = -3}
+  else if(wave == "W8"){s = -4}
+  else{ print("ERROR in Wave Assignment") }
+  factor = 0.2
+  return(factor*s + checkpoint)
+}
+
+birkiedf_vis_gath2 = birkiedf_vis_gath %>% 
+  mutate(distance = mapply(shift,wave,distance))
+
+birkiedf_vis_gath2 %>% 
+  #filter(wave != "Oldies") %>% 
+  ggplot(aes(x=distance,y=pace,color=wave))+
+  geom_point()#+
+  #geom_smooth(se = FALSE,size=1,method="loess")
+
+write.csv(birkiedf_vis_gath2,'d3_inputA.csv',row.names=FALSE)
+
+####################
+## Splits DataFrame
+####################
+
+birkiedf_vis2 = birkiedf %>% 
+  select("Name","Bib","Age","Sex","Start","T1","T2","T3","T4","T5") %>% 
+  mutate(wave = unlist(lapply(Start,waves)))
+birkiedf_vis2 = birkiedf_vis2[complete.cases(birkiedf_vis2),] 
+
+x_pos <- function(times_vec) {
+  pos_vec = (rank(times_vec)-1) %% 5
+  
+  pos_vec[pos_vec == 0] = 0.5
+  pos_vec[pos_vec == 1] = 1.5
+  pos_vec[pos_vec == 2] = 2.5
+  pos_vec[pos_vec == 3] = 3.5
+  pos_vec[pos_vec == 4] = 4.5
+  
+  return(pos_vec)
+}
+
+birkiedf_vis2$X1 = x_pos(birkiedf_vis2$T1)
+birkiedf_vis2$X2 = x_pos(birkiedf_vis2$T2)
+birkiedf_vis2$X3 = x_pos(birkiedf_vis2$T3)
+birkiedf_vis2$X4 = x_pos(birkiedf_vis2$T4)
+birkiedf_vis2$X5 = x_pos(birkiedf_vis2$T5)
+
+write.csv(birkiedf_vis2,'d3_inputB.csv',row.names=FALSE)
 
 
