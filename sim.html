@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<head>
+    <meta charset="UTF-8">
+    <title>American Birkebeiner Visualization</title>
+    <meta property="og:title" content="American Birkebeiner Visualization"/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:url" content=""/>
+    <meta property="og:image" content="">
+    <meta property="og:image:width" content="1200"/>
+    <meta property="og:image:height" content="630"/>
+    <meta property="og:description"
+          content="Compare and analyze your Birkebeiner preformance">
+</head>
+
+<!-- JQuery: https://code.jquery.com/ -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
+
+<style>
+    ul.ui-autocomplete {
+        list-style: none;
+        list-style-type: none;
+        list-style-position: inside;
+        padding: 0px;
+        margin: 0px;
+        background: #d9d9d9;
+    }
+    .ui-helper-hidden-accessible {
+        display:none !important;
+    }
+</style>
+
+<body>
+<label>
+    <span style="font-size: 144%; ">American Birkebeiner 2019</span>
+</label>
+<div id="buttonDiv">
+    <input type="range" min="0" max="29000" value="0" class="slider" id="timeRange">
+    <button type="button" onclick="onStartButtonClick()">Start</button>
+    <button type="button" onclick="onStopButtonClick()">Stop</button>
+    <button type="button" onclick="onResetButtonClick()">Reset</button>
+    <label>Time:</label>
+    <label id="time">00:00:00</label>
+</div>
+
+<div id='inputautoDiv' >
+    <input id='name_bib' type="text" class="form-control" placeholder="Search for Athlete">
+    <button type="button" onclick="onSearchButtonClick2();doSomethingElse()">Highlight</button>
+    <button type="button" onclick="onXButtonClick()">Clear</button>
+    <label id="resultText"/>
+</div>
+
+<canvas id="simulation-canvas"></canvas>
+
+<div id="histogram-svg"></div>
+
+</body>
+
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script>
+    let runners;
+    let highlighted_id = -1;
+    let highlighted_list = [];
+    let time = 0;
+    let started = false;
+
+    wave_abrvs = ["ME", "WE", "W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8","Oldies"];
+    var colorScale = d3.scaleOrdinal()
+        .domain(wave_abrvs)
+        .range(d3.schemeTableau10);
+
+    let unit = Math.floor(screen.availHeight / 200) * 10;
+    let margin = {top: 0.5 * unit, right: unit, bottom: 0, left: unit};
+    let width = 6 * unit;
+    let height = 18 * unit;
+    let routeWidth = unit*2; // unit / 2;
+    let dotRadius = 2;
+
+    let slider = document.getElementById("timeRange");
+    slider.oninput = function () {
+        time = +this.value;
+        document.getElementById("time").innerHTML = seconds_to_hms(time);
+        draw()
+    };
+
+    let canvas = d3.select("#simulation-canvas")
+        .attr("width", width)
+        .attr("height", height)
+        .style("transform", "translate(" + (margin.left) +
+            "px" + "," + (margin.top) + "px" + ")");
+    let context = canvas.node().getContext("2d");
+
+    d3.csv("d3_inputB.csv").then(function (data) {
+        runners = data;
+        
+        bib_array = [];
+        runners.forEach(function (d) {
+            d.random_offset = getRandomOffset(d.Bib); // d.running_id
+            bib_array.push(d.Bib)
+        });
+
+        draw();
+        d3.interval(function () {
+            if (started) {
+                time += 12;
+                slider.value = time;
+                document.getElementById("time").innerHTML = seconds_to_hms(time);
+                draw();
+            }
+        }, 20);
+
+        //AutoComplete:
+        $( "#name_bib" ).autocomplete({
+        //source: bib_array
+        source: function(request, response) {
+            var results = $.ui.autocomplete.filter(bib_array, request.term);
+            response(results.slice(0, 5));
+            }
+        });
+    });
+
+    let route_len = 16 - 0; // Determine using drawRoute()
+    function drawRoute() {
+        // Route
+        context.beginPath();
+        context.moveTo(2 * unit, 0 * unit);
+        context.lineTo(2 * unit, 16 * unit);
+        context.strokeStyle = "rgb(217,217,217)";
+        context.lineWidth = routeWidth;
+        context.stroke();
+    }
+
+    function drawDanube() {
+        context.beginPath();
+        context.moveTo(3 * unit, 0);
+        context.lineTo(3 * unit, 0.5 * unit);
+        context.lineTo(3.5 * unit, unit);
+        context.lineTo(3.5 * unit, 5.5 * unit);
+        context.lineTo(3 * unit, 6 * unit);
+        context.moveTo(3 * unit, 0.5 * unit);
+        context.lineTo(2.5 * unit, unit);
+        context.lineTo(2.5 * unit, 5.5 * unit);
+        context.lineTo(3 * unit, 6 * unit);
+        context.lineTo(3 * unit, 17 * unit);
+
+        context.strokeStyle = "rgb(67, 162, 202)";
+        context.lineWidth = 10;
+        context.stroke();
+    }
+
+    function drawDot(d, r, color) {
+        context.fillStyle = color;
+        let state = getState(d);
+        let cx = getRunnerX(d, state);
+        let cy = getRunnerY(d, state);
+
+        context.beginPath();
+
+        context.arc(cx, cy, r, 0, 2 * Math.PI);
+        context.fill();
+        
+        return (cy * 50) / (route_len * unit);
+    }
+
+    function drawLabels() {
+        // Start line
+        context.font = routeWidth/4 + "px Arial Black"; // add /4
+        context.fillStyle = "black";
+        context.fillText("start", 4 * unit, 0.2 * unit);
+        context.beginPath();
+        context.moveTo(1 * unit, 0 * unit);
+        context.lineTo(3 * unit, 0 * unit);
+
+        // Finish line
+        context.fillText("finish", 4 * unit, 19.8 * unit);
+        context.moveTo(1 * unit, (route_len/50)* 50 * unit);
+        context.lineTo(3 * unit, (route_len/50)* 50 * unit);
+
+        // Other lines
+        //context.fillText("12k", 0.7 * unit, 7.5 * unit);
+        context.moveTo(1 * unit, (route_len/50)* 12 * unit);
+        context.lineTo(3 * unit, (route_len/50)* 12 * unit);
+
+        //context.fillText("21.1k", 0.5 * unit, 17 * unit);
+        context.moveTo(1 * unit, (route_len/50)* 21.1 * unit);
+        context.lineTo(3 * unit, (route_len/50)* 21.1 * unit);
+
+        //context.fillText("36.3k", 3.5 * unit, 14 * unit);
+        context.moveTo(1 * unit, (route_len/50)* 36.3 * unit);
+        context.lineTo(3 * unit, (route_len/50)* 36.3 * unit);
+
+        //context.fillText("47.2k", 4.5 * unit, 3.5 * unit);
+        context.moveTo(1 * unit, (route_len/50)* 47.2 * unit);
+        context.lineTo(3 * unit, (route_len/50)* 47.2 * unit);
+
+        context.strokeStyle = "black";
+        context.lineWidth = 3;
+        context.stroke();
+
+        // Danube label
+        context.fillStyle = "rgb(67, 162, 202)";
+        context.save();
+        context.translate(3.3 * unit, 15 * unit);
+        context.rotate(Math.PI / 2);
+        context.fillText("Duna", 0, 0);
+        context.restore();
+    }
+
+    function drawRunners() {
+        if (highlighted_list.length < 1) { // highlighted_id === -1
+            runners.forEach(function (d) {
+                d.progress_km = drawDot(d, dotRadius, colorScale(d.wave)); // "rgb(230, 0, 126)"
+            });
+        } else {
+            runners.forEach(function (d) {
+                d.progress_km = drawDot(d, dotRadius, colorScale(d.wave)); // "rgb(201,148,199)"
+            });
+            
+            for (index = 0; index < highlighted_list.length; index++) { 
+                let highlighted = runners.find(runner => runner.Bib === highlighted_list[index]);  // runner.running_id
+                drawDot(highlighted, 3 * dotRadius, "rgb(0, 0, 0)") // "rgb(230, 0, 126)"
+            }  
+        }
+        drawHistogram(); //histogram_data
+    }
+
+    function draw() {
+        context.clearRect(0, 0, width, height);
+        //drawDanube();
+        drawRoute();
+        drawRunners();
+        drawLabels();
+    }
+
+    function onStartButtonClick() {
+        started = true;
+    }
+
+    function onStopButtonClick() {
+        started = false;
+    }
+
+    function onResetButtonClick() {
+        time = 0;
+        document.getElementById("time").innerHTML = seconds_to_hms(time);
+        slider.value = time;
+        draw();
+    }
+
+    function onSearchButtonClick2(){
+        let search_id = document.getElementById("name_bib").value;
+        let result = runners.find(runner => runner.Bib === search_id); // runner.running_id
+        if (typeof result !== "undefined") {
+            highlighted_list.push(result.Bib);
+            document.getElementById("resultText").innerHTML = "";
+        } else {
+            document.getElementById("resultText").innerHTML = "Not Found!";
+        }
+        draw();
+    }
+
+    function onXButtonClick() {
+        document.getElementById("runner_id").value = "";
+        highlighted_id = -1;
+        highlighted_list = [];
+        draw();
+    }
+
+    function getRandomOffset(running_id) {
+        let maxLength = routeWidth - dotRadius;
+        let random = (31 * running_id + 127) % maxLength;
+        return random - maxLength / 2
+    }
+
+    function getState(d) {
+        let phase;
+        let progress;
+        let start_time = 0; // hms_to_seconds(d["gross_time"]) - hms_to_seconds(d["net_time"]);
+        let net_time;
+        //Splits = //[12, 21.1, 36.3, 47.2, 50]
+        if (time < hms_to_seconds(d["T1"])) {
+            let net_12_k = hms_to_seconds(d["T1"]) - start_time;
+            phase = "12k";
+            net_time = time - start_time;
+            progress = net_time / net_12_k;
+        } else if (time < hms_to_seconds(d["T2"])) {
+            let net_21_k = hms_to_seconds(d["T2"]) - hms_to_seconds(d["T1"]);
+            phase = "21.1k";
+            net_time = time - hms_to_seconds(d["T1"]);
+            progress = net_time / net_21_k;
+        }
+          else if (time < hms_to_seconds(d["T3"])){
+            let net_36_k = hms_to_seconds(d["T3"]) - hms_to_seconds(d["T2"]);
+            phase = "36.3k";
+            net_time = time - hms_to_seconds(d["T2"]);
+            progress = net_time / net_36_k;
+        } 
+        else if (time < hms_to_seconds(d["T4"])){
+            let net_47_k = hms_to_seconds(d["T4"]) - hms_to_seconds(d["T3"]);
+            phase = "47.2k";
+            net_time = time - hms_to_seconds(d["T3"]);
+            progress = net_time / net_47_k;
+        } 
+        else {
+            let net_50_k = hms_to_seconds(d["T5"]) - hms_to_seconds(d["T4"]);
+            phase = "50k";
+            net_time = time - hms_to_seconds(d["T4"]);
+            progress = net_time / net_50_k;
+        }
+
+        return {phase: phase, progress: progress};
+    }
+
+    function getRunnerX(d, state) {
+        return 2 * unit + d.random_offset;
+    }
+
+    function getRunnerY(d, state) {
+        switch (state.phase) {
+            case "12k":
+                if (state.progress < 1.1) {
+                    let from = 0 * unit;
+                    let to = (route_len/50) * 12 * unit;
+                    return from + (to - from) * state.progress;
+                }
+            case "21.1k":
+                if (state.progress < 1.1) {
+                    let from = (route_len/50) * 12 * unit;
+                    let to = (route_len/50) * 21.1 * unit;
+                    return from + (to - from) * state.progress;
+                }
+            case "36.3k":
+                if (state.progress < 1.1) {
+                    let from = (route_len/50) * 21.1 * unit;
+                    let to = (route_len/50) * 36.3 * unit;
+                    return from + (to - from) * state.progress;
+                }
+            case "47.2k":
+                if (state.progress < 1.1) {
+                    let from = (route_len/50) * 36.3 * unit;
+                    let to = (route_len/50) * 47.2 * unit;
+                    return from + (to - from) * state.progress;
+                }
+            case "50k":
+                if (state.progress < 1.1) {
+                    let from = (route_len/50) * 47.2 * unit;
+                    let to = (route_len/50) * 50 * unit;
+                    return from + (to - from) * state.progress;
+                }
+        }
+    }
+
+    function hms_to_seconds(hms) {
+        let a = hms.split(":");
+        return (+a[0]) * 60 * 60 + (+a[1]) * 60 + (+a[2]);
+    }
+
+    function seconds_to_hms(seconds) {
+        return new Date(seconds * 1000).toISOString().substr(11, 8);
+    }
+
+    function starttime_to_seconds(start_time) {
+        return hms_to_seconds(start_time) - hms_to_seconds("08:15:00"); // 8:15:00am first racers
+    }
+
+</script>
+
+<script>
+console.log(screen.availWidth);
+
+var marginH = {topH: 20, rightH: 40, bottomH: 20, leftH: 40},
+    widthH = screen.availWidth - marginH.leftH - marginH.rightH,
+    heightH = screen.availHeight - marginH.topH - marginH.bottomH;
+
+var svg = d3.select("#histogram-svg")
+    .append("svg")
+    .attr("width", widthH + marginH.leftH + marginH.rightH)
+    .attr("height", heightH + marginH.topH + marginH.bottomH)
+    .append("g")
+    .attr("transform",
+            "translate(" + marginH.leftH + "," + marginH.topH + ")");
+
+var x_scale = d3.scaleLinear()
+    .domain([0, 50])     // 50km
+    .range([0, widthH]);
+
+svg.append("g")
+    .attr("transform", "translate(0," + heightH + ")")
+    .call(d3.axisBottom(x_scale));
+
+var histogram = d3.histogram()
+    .domain(x_scale.domain()) 
+    .thresholds(x_scale.ticks(200))
+    .value(function(d) { return d.progress_km; });
+
+var y_scale = d3.scaleLinear()
+    .range([heightH, 0])
+    .domain([0, 200]);   // select height manually
+
+svg.append("g")
+    .call(d3.axisLeft(y_scale));
+
+function drawHistogram(){
+    //console.log(runners);
+    for (index = 0; index < wave_abrvs.length; index++) { //
+        wave_i = runners.filter(function(d){ return d.wave === wave_abrvs[index];});
+        
+        bins = histogram(wave_i)
+        
+        histo = svg.selectAll("rect."+wave_abrvs[index])
+            .data(bins);
+        
+        histo
+            .enter()
+            .append("rect")
+            .merge(histo)
+            .transition() 
+            .duration(10)
+                .attr("class", wave_abrvs[index])
+                .attr("x", 1)
+                .attr("transform", function(d) { return "translate(" + x_scale(d.x0) + "," + y_scale(d.length) + ")"; })
+                .attr("width", function(d) { return x_scale(d.x1) - x_scale(d.x0) ; })
+                .attr("height", function(d) { return heightH - y_scale(d.length); })
+                .style("fill", colorScale(wave_abrvs[index]))
+                .style("opacity", 0.6);
+        
+        histo
+            .exit()
+            .remove();
+    };
+}
+
+function doSomethingElse(){
+    console.log("Add line to Histogram to track Skier")
+    }
+
+</script>
+
+
+
+</html>
